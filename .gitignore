@@ -3,3 +3,8 @@ obj/
 /packages/
 riderModule.iml
 /_ReSharper.Caches/
+.idea
+Meow.LiquidGlass.Avalonia/bin/
+Meow.LiquidGlass.Avalonia/obj/
+Demo/bin/
+Demo/obj/
