@@ -369,7 +369,7 @@ public class MeowLiquidGlassDrawOperation : ICustomDrawOperation
             
             using var backgroundImg = surface.Snapshot();
 
-            float s = (float)RenderScaling;
+            var s = (float)RenderScaling;
             var matrix = SKMatrix.CreateScale(1f / s, 1f / s);
             matrix.TransX = -(float)WindowOffset.X;
             matrix.TransY = -(float)WindowOffset.Y;
@@ -403,13 +403,13 @@ public class MeowLiquidGlassDrawOperation : ICustomDrawOperation
             SKSize size = new SKSize((float)Bounds.Width, (float)Bounds.Height);
             
             // 圆角半径 = 高的 20%
-            float radius = size.Height * 0.15f;
+            var radius = size.Height * 0.15f;
 
             // 目标矩形（假设裁整个 canvas）
             var rect = SKRect.Create(size.Width, size.Height);
 
             // 关键：圆角半径不能超过宽/高的一半，否则 Skia 会自动缩放
-            float maxRadius = Math.Min(rect.Width, rect.Height) * 0.5f;
+            var maxRadius = Math.Min(rect.Width, rect.Height) * 0.5f;
             radius = Math.Min(radius, maxRadius);
 
             using var roundRect = new SKRoundRect(rect, radius);
