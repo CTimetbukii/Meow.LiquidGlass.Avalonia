@@ -45,59 +45,83 @@ public class MeowLiquidGlassDrawOperation : ICustomDrawOperation
                                     
                                     half4 main(float2 coord) {
                                         // 先计算边缘位置像素，按10%比例来
-                                        float edge = min(uResolution.x, uResolution.y) * 0.15;
+                                        // float edge = min(uResolution.x, uResolution.y) * 0.2;
                                         
-                                        // 缓存几个边缘位置，避免重复计算
+                                        // // 缓存几个边缘位置，避免重复计算
+                                        // float right_x_edge = uResolution.x - edge;
+                                        // float right_y_edge = uResolution.y - edge;
+                                    
+                                        // // 先处理像素最多的情况：像素在中间
+                                        // if (coord.x > edge && coord.x < right_x_edge && coord.y > edge && coord.y < right_y_edge) {
+                                        //     return uBackground.eval(coord);
+                                        // }
+                                    
+                                        // // 判断坐标是不是在边缘位置
+                                        // if (coord.x < edge && coord.y < edge) {
+                                        //     //在左上角
+                                        //     return left_top(coord, edge); //我们使用的是标准半圆，edge本身作为圆的半径R传入
+                                        // }
+                                    
+                                        // if (coord.x > edge && coord.x < right_x_edge && coord.y < edge) {
+                                        //     //在顶部
+                                        //     return top(coord, edge);
+                                        // }
+                                    
+                                        // if (coord.x > right_x_edge && coord.y < edge) {
+                                        //     //在右上角
+                                        //     return right_top(coord, edge);
+                                        // }
+                                    
+                                        // if (coord.x > right_x_edge && coord.y > edge && coord.y < right_y_edge) {
+                                        //     //右边
+                                        //     return right(coord, edge);
+                                        // }
+                                    
+                                        // if (coord.x > right_x_edge && coord.y > right_y_edge) {
+                                        //     //右下角
+                                        //     return right_bottom(coord, edge);
+                                        // }
+                                    
+                                        // if (coord.x > edge && coord.y > right_y_edge) {
+                                        //     //底下
+                                        //     return bottom(coord, edge);
+                                        // }
+                                    
+                                        // if (coord.x < edge && coord.y > right_y_edge) {
+                                        //     //左下角
+                                        //     return left_bottom(coord, edge);
+                                        // }
+                                    
+                                        // if (coord.x < edge && coord.y > edge && coord.y < right_y_edge) {
+                                        //     //左边
+                                        //     return left(coord, edge);
+                                        // }
+                                    
+                                        // // 理论上说，走不到这个分支
+                                        // return uBackground.eval(coord);
+                                    
+                                        float edge = min(uResolution.x, uResolution.y) * 0.2;
                                         float right_x_edge = uResolution.x - edge;
                                         float right_y_edge = uResolution.y - edge;
                                     
-                                        // 先处理像素最多的情况：像素在中间
-                                        if (coord.x > edge && coord.x < right_x_edge && coord.y > edge && coord.y < right_y_edge) {
-                                            return uBackground.eval(coord);
-                                        }
-                                    
-                                        // 判断坐标是不是在边缘位置
-                                        if (coord.x < edge && coord.y < edge) {
-                                            //在左上角
-                                            return left_top(coord, edge); //我们使用的是标准半圆，edge本身作为圆的半径R传入
-                                        }
-                                    
-                                        if (coord.x > edge && coord.x < right_x_edge && coord.y < edge) {
-                                            //在顶部
+                                        // 先按 y 分三行
+                                        if (coord.y < edge) {
+                                            // 上边一行
+                                            if (coord.x < edge) return left_top(coord, edge);
+                                            if (coord.x > right_x_edge) return right_top(coord, edge);
                                             return top(coord, edge);
                                         }
                                     
-                                        if (coord.x > right_x_edge && coord.y < edge) {
-                                            //在右上角
-                                            return right_top(coord, edge);
-                                        }
-                                    
-                                        if (coord.x > right_x_edge && coord.y > edge && coord.y < right_y_edge) {
-                                            //右边
-                                            return right(coord, edge);
-                                        }
-                                    
-                                        if (coord.x > right_x_edge && coord.y > right_y_edge) {
-                                            //右下角
-                                            return right_bottom(coord, edge);
-                                        }
-                                    
-                                        if (coord.x > edge && coord.y > right_y_edge) {
-                                            //底下
+                                        if (coord.y > right_y_edge) {
+                                            // 下边一行
+                                            if (coord.x < edge) return left_bottom(coord, edge);
+                                            if (coord.x > right_x_edge) return right_bottom(coord, edge);
                                             return bottom(coord, edge);
                                         }
                                     
-                                        if (coord.x < edge && coord.y > right_y_edge) {
-                                            //左下角
-                                            return left_bottom(coord, edge);
-                                        }
-                                    
-                                        if (coord.x < edge && coord.y > edge && coord.y < right_y_edge) {
-                                            //左边
-                                            return left(coord, edge);
-                                        }
-                                    
-                                        // 理论上说，走不到这个分支
+                                        // 中间一行
+                                        if (coord.x < edge) return left(coord, edge);
+                                        if (coord.x > right_x_edge) return right(coord, edge);
                                         return uBackground.eval(coord);
                                     }
                                     
@@ -416,7 +440,7 @@ public class MeowLiquidGlassDrawOperation : ICustomDrawOperation
             using var clipPath = new SKPath();
             clipPath.AddRoundRect(roundRect);
 
-            canvas.ClipPath(clipPath, SKClipOperation.Intersect, antialias: true);
+            canvas.ClipPath(clipPath, antialias: true);
             canvas.DrawRect(SKRect.Create((float)Bounds.Width, (float)Bounds.Height), paint);
 
             canvas.ClipRect(Bounds.ToSKRect());
