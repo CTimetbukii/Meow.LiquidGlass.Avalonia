@@ -31,6 +31,10 @@ public class MeowLiquidGlassDrawOperation : ICustomDrawOperation
     private const string SkSlCode = """
                                     uniform float2 uResolution;
                                     uniform shader uBackground;
+                                    uniform float invR;
+                                    uniform float edge;
+                                    uniform float right_x_edge;
+                                    uniform float right_y_edge;
                                     
                                     vec4 left_top(float2 coord, float R);
                                     vec4 top(float2 coord, float R);
@@ -44,66 +48,6 @@ public class MeowLiquidGlassDrawOperation : ICustomDrawOperation
                                     float refract_twice(float x, float R);
                                     
                                     half4 main(float2 coord) {
-                                        // 先计算边缘位置像素，按10%比例来
-                                        // float edge = min(uResolution.x, uResolution.y) * 0.2;
-                                        
-                                        // // 缓存几个边缘位置，避免重复计算
-                                        // float right_x_edge = uResolution.x - edge;
-                                        // float right_y_edge = uResolution.y - edge;
-                                    
-                                        // // 先处理像素最多的情况：像素在中间
-                                        // if (coord.x > edge && coord.x < right_x_edge && coord.y > edge && coord.y < right_y_edge) {
-                                        //     return uBackground.eval(coord);
-                                        // }
-                                    
-                                        // // 判断坐标是不是在边缘位置
-                                        // if (coord.x < edge && coord.y < edge) {
-                                        //     //在左上角
-                                        //     return left_top(coord, edge); //我们使用的是标准半圆，edge本身作为圆的半径R传入
-                                        // }
-                                    
-                                        // if (coord.x > edge && coord.x < right_x_edge && coord.y < edge) {
-                                        //     //在顶部
-                                        //     return top(coord, edge);
-                                        // }
-                                    
-                                        // if (coord.x > right_x_edge && coord.y < edge) {
-                                        //     //在右上角
-                                        //     return right_top(coord, edge);
-                                        // }
-                                    
-                                        // if (coord.x > right_x_edge && coord.y > edge && coord.y < right_y_edge) {
-                                        //     //右边
-                                        //     return right(coord, edge);
-                                        // }
-                                    
-                                        // if (coord.x > right_x_edge && coord.y > right_y_edge) {
-                                        //     //右下角
-                                        //     return right_bottom(coord, edge);
-                                        // }
-                                    
-                                        // if (coord.x > edge && coord.y > right_y_edge) {
-                                        //     //底下
-                                        //     return bottom(coord, edge);
-                                        // }
-                                    
-                                        // if (coord.x < edge && coord.y > right_y_edge) {
-                                        //     //左下角
-                                        //     return left_bottom(coord, edge);
-                                        // }
-                                    
-                                        // if (coord.x < edge && coord.y > edge && coord.y < right_y_edge) {
-                                        //     //左边
-                                        //     return left(coord, edge);
-                                        // }
-                                    
-                                        // // 理论上说，走不到这个分支
-                                        // return uBackground.eval(coord);
-                                    
-                                        float edge = min(uResolution.x, uResolution.y) * 0.2;
-                                        float right_x_edge = uResolution.x - edge;
-                                        float right_y_edge = uResolution.y - edge;
-                                    
                                         // 先按 y 分三行
                                         if (coord.y < edge) {
                                             // 上边一行
@@ -295,59 +239,103 @@ public class MeowLiquidGlassDrawOperation : ICustomDrawOperation
                                     }
                                     
                                     float refract_once(float x, float R) {
-                                        //计算sinr
-                                        float sinr = (R - x) / R;
+                                        // //计算sinr
+                                        // float sinr = (R - x) / R; //性能开销。可以在CPU侧提前计算好1/R
                                     
-                                        //根据折射定律计算sino，取玻璃n=1.5
-                                        float sino = sinr / 1.5;
+                                        // //根据折射定律计算sino，取玻璃n=1.5
+                                        // float sino = sinr * 0.6666666;
                                     
-                                        //计算出cosr，coso
-                                        float cosr = sqrt(1-(sinr * sinr));
-                                        float coso = sqrt(1-(sino * sino));
+                                        // //计算出cosr，coso
+                                        // float cosr = sqrt(1-(sinr * sinr)); //性能开销，sqrt
+                                        // float coso = sqrt(1-(sino * sino)); //性能开销, sqrt
                                     
-                                        //使用三角函数展开，计算tan(r-o)
-                                        float tanro = (sinr * coso - cosr * sino) / (cosr * coso + sinr * sino);
+                                        // //使用三角函数展开，计算tan(r-o)
+                                        // float tanro = (sinr * coso - cosr * sino) / (cosr * coso + sinr * sino);
                                     
-                                        //计算tanr
-                                        float tanr = sinr / cosr;
+                                        // //计算tanr
+                                        // float tanr = sinr / cosr;
                                     
-                                        //计算h
-                                        float h = R + (R - x) / tanr;
+                                        // //计算h
+                                        // float h = R + (R - x) / tanr;
                                     
-                                        //得到初步映射偏移量
-                                        float refract_offset = h * tanro;
+                                        // //得到初步映射偏移量
+                                        // float refract_offset = h * tanro;
                                     
-                                        return x + refract_offset;
+                                        // return x + refract_offset;
+                                    
+                                        
+                                        // invR 建议在 CPU 侧预计算：invR = 1.0 / R
+                                        float s = (R - x) * invR;   // sinr
+                                        float s2 = s * s;
+                                    
+                                        float cosr = sqrt(1.0 - s2);
+                                        float coso = sqrt(1.0 - 0.4444444444 * s2); // 0.4444444444 = (2/3)^2
+                                    
+                                        float tanro = s * (coso - 0.6666666667 * cosr)
+                                                    / (cosr * coso + 0.6666666667 * s2);
+                                    
+                                        float h = R * (1.0 + cosr); // 等价于原 h = R + (R - x) / tanr
+                                        return x + h * tanro;
                                     }
                                     
                                     float refract_twice(float x, float R) {
-                                        //计算sinr
-                                        float sinr = (R - x) / R;
+                                        // //计算sinr
+                                        // float sinr = (R - x) / R;
                                     
-                                        //折射定律, n取1.5
-                                        float sino = sinr / 1.5;
+                                        // //折射定律, n取1.5
+                                        // float sino = sinr / 1.5;
                                     
-                                        //计算cosr, coso
-                                        float cosr = sqrt(1-(sinr * sinr));
-                                        float coso = sqrt(1-(sino * sino));
+                                        // //计算cosr, coso
+                                        // float cosr = sqrt(1-(sinr * sinr));
+                                        // float coso = sqrt(1-(sino * sino));
                                     
-                                        //计算h
-                                        float h = R * cosr;
+                                        // //计算h
+                                        // float h = R * cosr;
                                     
-                                        //根据正弦定律，计算H
-                                        float H = (R * coso) / (coso * cosr + sino * sinr);
+                                        // //根据正弦定律，计算H
+                                        // float H = (R * coso) / (coso * cosr + sino * sinr);
                                     
-                                        //计算P
-                                        float P = R + h - H;
+                                        // //计算P
+                                        // float P = R + h - H;
                                     
-                                        //计算sin(r-o)，cos(r-o)，为了计算下面的tan(2r-2o)
-                                        float sinro = sinr * sino - cosr * sino;
-                                        float cosro = cosr * coso + sinr * sino;
+                                        // //计算sin(r-o)，cos(r-o)，为了计算下面的tan(2r-2o)
+                                        // float sinro = sinr * sino - cosr * sino;
+                                        // float cosro = cosr * coso + sinr * sino;
                                     
-                                        //计算tan(2r-2o)，利用三角函数展开计算
-                                        float tan2r2o = (2 * sinro * cosro) / (cosro * cosro - sinro * sinro);
+                                        // //计算tan(2r-2o)，利用三角函数展开计算
+                                        // float tan2r2o = (2 * sinro * cosro) / (cosro * cosro - sinro * sinro);
                                     
-                                        //最后得到偏移量
+                                        // //最后得到偏移量
+                                        // float refract_offset = P * tan2r2o;
+                                    
+                                        // return x + refract_offset;
+                                    
+                                        // 常量：n=1.5
+                                        const float k  = 0.6666666667; // 1/1.5
+                                        const float k2 = 0.4444444444; // (1/1.5)^2 = 4/9
+                                    
+                                        // sinr = (R - x) / R = (R - x) * invR
+                                        float s = (R - x) * invR;
+                                        float s2 = s * s;
+                                    
+                                        // cosr, coso
+                                        float cr = sqrt(1.0 - s2);
+                                        float co = sqrt(1.0 - k2 * s2);
+                                    
+                                        // 计算 cos(r-o) 和 sin(r-o)
+                                        // cos(r-o) = cosr*coso + sinr*sino = cr*co + k*s2
+                                        // sin(r-o) = sinr*coso - cosr*sino = s*(co - k*cr)
+                                        float cosro = cr * co + k * s2;
+                                        float sinro = s * (co - k * cr);
+                                    
+                                        // H = R * coso / cos(r-o)
+                                        // P = R + h - H = R + R*cr - R*co/cosro = R*(1 + cr - co/cosro)
+                                        float P = R * (1.0 + cr - co / cosro);
+                                    
+                                        // tan(2(r-o)) = 2*sin(r-o)*cos(r-o) / (cos²(r-o) - sin²(r-o))
+                                        float tan2r2o = (2.0 * sinro * cosro) / (cosro * cosro - sinro * sinro);
+                                    
+                                        // 最终偏移
                                         float refract_offset = P * tan2r2o;
                                     
                                         return x + refract_offset;
@@ -404,10 +392,20 @@ public class MeowLiquidGlassDrawOperation : ICustomDrawOperation
                 matrix);
 
             // 准备传入SKSL的参数
+            
+            // 提前计算edge，1/R，避免GPU去算这个
+            var edge = Math.Min(Bounds.Height, Bounds.Width) * 0.15;
+            var invR = 1 / edge;
+            var rightXEdge = Bounds.Width - edge;
+            var rightYEdge = Bounds.Height - edge;
+            
             var uniforms = new SKRuntimeEffectUniforms(_effect);
             uniforms["uResolution"] = new[] { (float)Bounds.Width, (float)Bounds.Height };
-            // uniforms["uBlurRadius"] = 0.1f;
-            
+            uniforms["invR"] = (float)invR;
+            uniforms["edge"] = (float)edge;
+            uniforms["right_x_edge"] = (float)rightXEdge;
+            uniforms["right_y_edge"] = (float)rightYEdge;
+            //right_x_edge
 
             var children = new SKRuntimeEffectChildren(_effect);
             children["uBackground"] = backgroundShader;
@@ -424,7 +422,7 @@ public class MeowLiquidGlassDrawOperation : ICustomDrawOperation
             //将绘制限制在控件的边界内
             canvas.Save();
 
-            SKSize size = new SKSize((float)Bounds.Width, (float)Bounds.Height);
+            var size = new SKSize((float)Bounds.Width, (float)Bounds.Height);
             
             // 圆角半径 = 高的 20%
             var radius = size.Height * 0.15f;
