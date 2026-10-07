@@ -3,18 +3,35 @@
         xmlns:vm="using:Demo.ViewModels"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:liquid="clr-namespace:Meow.LiquidGlass.Avalonia;assembly=Meow.LiquidGlass.Avalonia"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="Demo.Views.MainWindow"
+        CanResize="True"
         x:DataType="vm:MainWindowViewModel"
         Icon="/Assets/avalonia-logo.ico"
         Title="Demo">
 
     <Design.DataContext>
-        <!-- This only sets the DataContext for the previewer in an IDE,
-             to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
         <vm:MainWindowViewModel/>
     </Design.DataContext>
 
-    <TextBlock Text="{Binding Greeting}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-
+    <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+        <Image Source="/Assets/TestBackground.jpeg"
+               HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+        <Canvas>
+            <liquid:MeowLiquidGlassSurface x:Name="Glass"
+                                           Width="400" Height="200"
+                                           Canvas.Left="200" Canvas.Top="150"
+                                           PointerPressed="OnGlassPointerPressed"
+                                           PointerMoved="OnGlassPointerMoved"
+                                           PointerReleased="OnGlassPointerReleased">
+                <Border Background="Transparent">
+                    <TextBlock Text="{Binding Greeting}"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               FontSize="30"/>
+                </Border>
+            </liquid:MeowLiquidGlassSurface>
+        </Canvas>
+    </Grid>
 </Window>
