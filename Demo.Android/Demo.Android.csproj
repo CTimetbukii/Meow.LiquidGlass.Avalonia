@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net10.0-android</TargetFramework>
+        <SupportedOSPlatformVersion>23</SupportedOSPlatformVersion>
+        <OutputType>Exe</OutputType>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+        <ApplicationId>com.meow.liquidglass.demo</ApplicationId>
+        <!-- 生成 Java 类的包名，需与 AndroidManifest 里的 android:name 对应 -->
+        <JavaPackageName>com.meow.liquidglass.demo</JavaPackageName>
+        <ApplicationVersion>1</ApplicationVersion>
+        <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+        <RootNamespace>Demo.Android</RootNamespace>
+        <AssemblyName>Demo.Android</AssemblyName>
+    </PropertyGroup>
+
+    <!-- 本机 Android SDK / JDK 位置 -->
+    <PropertyGroup>
+        <AndroidSdkDirectory>E:\AndroidSDK</AndroidSdkDirectory>
+        <JavaSdkDirectory>D:\Program Files\Java\jdk-17</JavaSdkDirectory>
+        <AndroidPackageFormat>apk</AndroidPackageFormat>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Avalonia.Android" Version="12.0.4"/>
+        <!-- Theme.AppCompat.NoActionBar 来自 AndroidX AppCompat -->
+        <PackageReference Include="Xamarin.AndroidX.AppCompat" Version="1.7.1.4"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Demo.Shared\Demo.Shared.csproj"/>
+    </ItemGroup>
+
+</Project>

@@ -25,6 +25,11 @@ public partial class App : Application
                 DataContext = new MainWindowViewModel(),
             };
         }
+        else if (ApplicationLifetime is ISingleViewApplicationLifetime singleView)
+        {
+            // Android / iOS / 浏览器等单视图平台
+            singleView.MainView = new MainView();
+        }
 
         base.OnFrameworkInitializationCompleted();
     }

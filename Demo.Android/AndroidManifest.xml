@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <uses-sdk android:minSdkVersion="23" android:targetSdkVersion="36" />
+  <application android:label="Meow Liquid Glass"
+               android:name="com.meow.liquidglass.demo.AndroidApplication"
+               android:icon="@mipmap/appicon"
+               android:roundIcon="@mipmap/appicon_round"
+               android:allowBackup="true"
+               android:supportsRtl="true" />
+</manifest>

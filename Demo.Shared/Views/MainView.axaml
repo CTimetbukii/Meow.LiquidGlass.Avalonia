@@ -1,0 +1,28 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Demo.ViewModels"
+             xmlns:liquid="clr-namespace:Meow.LiquidGlass.Avalonia;assembly=Meow.LiquidGlass.Avalonia"
+             x:Class="Demo.Views.MainView"
+             x:DataType="vm:MainWindowViewModel">
+
+    <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+        <Image Source="/Assets/TestBackground.jpeg"
+               Stretch="UniformToFill"
+               HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+        <Canvas>
+            <liquid:MeowLiquidGlassSurface x:Name="Glass"
+                                           Width="400" Height="200"
+                                           Canvas.Left="200" Canvas.Top="150"
+                                           PointerPressed="OnGlassPointerPressed"
+                                           PointerMoved="OnGlassPointerMoved"
+                                           PointerReleased="OnGlassPointerReleased">
+                <Border Background="Transparent">
+                    <TextBlock Text="{Binding Greeting}"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               FontSize="30"/>
+                </Border>
+            </liquid:MeowLiquidGlassSurface>
+        </Canvas>
+    </Grid>
+</UserControl>
