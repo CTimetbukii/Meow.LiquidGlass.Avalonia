@@ -18,18 +18,46 @@
     <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
         <Image Source="/Assets/TestBackground.jpeg"
                HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+
         <Canvas>
+            <!-- ===== 对照组：纯白卡片，拖拽逻辑与玻璃卡片完全一致，但不经过玻璃着色器 ===== -->
+            <Border x:Name="PlainCard"
+                    Width="400" Height="200"
+                    Canvas.Left="60" Canvas.Top="40"
+                    CornerRadius="30"
+                    Background="White"
+                    BoxShadow="0 8 24 0 #40000000"
+                    PointerPressed="OnPlainPointerPressed"
+                    PointerMoved="OnPlainPointerMoved"
+                    PointerReleased="OnPlainPointerReleased">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="6">
+                    <TextBlock Text="纯白卡片"
+                               HorizontalAlignment="Center"
+                               FontSize="30"/>
+                    <TextBlock Text="无玻璃效果"
+                               HorizontalAlignment="Center"
+                               FontSize="16"
+                               Opacity="0.6"/>
+                </StackPanel>
+            </Border>
+
+            <!-- ===== 实验组：李逵的液态玻璃 ===== -->
             <liquid:MeowLiquidGlassSurface x:Name="Glass"
                                            Width="400" Height="200"
-                                           Canvas.Left="200" Canvas.Top="150"
+                                           Canvas.Left="360" Canvas.Top="180"
                                            PointerPressed="OnGlassPointerPressed"
                                            PointerMoved="OnGlassPointerMoved"
                                            PointerReleased="OnGlassPointerReleased">
                 <Border Background="Transparent">
-                    <TextBlock Text="{Binding Greeting}"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center"
-                               FontSize="30"/>
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="6">
+                        <TextBlock Text="{Binding Greeting}"
+                                   HorizontalAlignment="Center"
+                                   FontSize="30"/>
+                        <TextBlock Text="液态玻璃"
+                                   HorizontalAlignment="Center"
+                                   FontSize="16"
+                                   Opacity="0.6"/>
+                    </StackPanel>
                 </Border>
             </liquid:MeowLiquidGlassSurface>
         </Canvas>

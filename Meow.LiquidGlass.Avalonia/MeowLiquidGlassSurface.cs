@@ -11,7 +11,7 @@ public class MeowLiquidGlassSurface : ContentControl
         var topLevel = TopLevel.GetTopLevel(this);
         var topLeft = this.TranslatePoint(new Point(0, 0), topLevel!);
         
-        var operation = new MeowLiquidGlassDrawOperation();
+        var operation = new MeowLiquidGlassDrawOperation(true);
         operation.Bounds = new Rect(Bounds.Size);
         operation.WindowOffset = topLeft ?? default;
         operation.RenderScaling = topLevel?.RenderScaling ?? 1.0;

@@ -1,24 +1,19 @@
-using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
-using Avalonia.Media;
 using Demo.ViewModels;
 
 namespace Demo.Views;
 
 /// <summary>
-/// 移动端（Android）根视图：与桌面版 MainWindow 同一套交互，
+/// 移动端（Android）根视图：与桌面版 MainWindow 同一套内容，
 /// 但根节点是 UserControl 而不是 Window。
+/// 页面上有两张卡片——纯白对照卡片与液态玻璃卡片，拖拽逻辑完全相同，
+/// 用来区分「拖拽本身的开销」和「玻璃着色器的开销」。
 /// </summary>
 public partial class MainView : UserControl
 {
-    private readonly TranslateTransform _dragOffset = new();
-
-    private bool _isDragging;
-    private Point _dragStartPoint;
-    private double _dragStartX;
-    private double _dragStartY;
-    private Control? _draggingControl;
+    private readonly DragBehavior _plainDrag;
+    private readonly DragBehavior _glassDrag;
 
     public MainView()
     {
@@ -26,55 +21,25 @@ public partial class MainView : UserControl
 
         DataContext = new MainWindowViewModel();
 
-        // 把 TranslateTransform 挂到 Glass 控件上
-        Glass.RenderTransform = _dragOffset;
+        _plainDrag = new DragBehavior(this, PlainCard);
+        _glassDrag = new DragBehavior(this, Glass);
     }
+
+    private void OnPlainPointerPressed(object? sender, PointerPressedEventArgs e)
+        => _plainDrag.OnPointerPressed(sender, e);
+
+    private void OnPlainPointerMoved(object? sender, PointerEventArgs e)
+        => _plainDrag.OnPointerMoved(sender, e);
+
+    private void OnPlainPointerReleased(object? sender, PointerReleasedEventArgs e)
+        => _plainDrag.OnPointerReleased(sender, e);
 
     private void OnGlassPointerPressed(object? sender, PointerPressedEventArgs e)
-    {
-        if (sender is not Control control)
-        {
-            return;
-        }
-
-        // 触屏上 PointerPressed 本身带左键语义，这里不再强制要求 LeftButton，
-        // 以便手指触摸也能拖动。
-        _isDragging = true;
-        _draggingControl = control;
-
-        _dragStartPoint = e.GetPosition(this);
-
-        _dragStartX = _dragOffset.X;
-        _dragStartY = _dragOffset.Y;
-
-        e.Pointer.Capture(control);
-        e.Handled = true;
-    }
+        => _glassDrag.OnPointerPressed(sender, e);
 
     private void OnGlassPointerMoved(object? sender, PointerEventArgs e)
-    {
-        if (!_isDragging || _draggingControl is null)
-        {
-            return;
-        }
-
-        var current = e.GetPosition(this);
-        double dx = current.X - _dragStartPoint.X;
-        double dy = current.Y - _dragStartPoint.Y;
-
-        _dragOffset.X = _dragStartX + dx;
-        _dragOffset.Y = _dragStartY + dy;
-    }
+        => _glassDrag.OnPointerMoved(sender, e);
 
     private void OnGlassPointerReleased(object? sender, PointerReleasedEventArgs e)
-    {
-        if (!_isDragging)
-        {
-            return;
-        }
-
-        _isDragging = false;
-        _draggingControl = null;
-        e.Pointer.Capture(null);
-    }
+        => _glassDrag.OnPointerReleased(sender, e);
 }
