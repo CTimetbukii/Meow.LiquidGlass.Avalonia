@@ -33,47 +33,51 @@ public class MeowLiquidGlassDrawOperation : ICustomDrawOperation
                                     uniform float edge;
                                     uniform float2 point_1;
                                     uniform float2 point_2;
-                                    uniform float invR; // 必须满足 invR = 1.0 / edge
-
+                                    uniform float invR; // 必须等于 1.0 / edge
+                                    
+                                    // 返回的是折射偏移量，不是最终坐标
                                     float refract_offset(float x) {
                                         const float c    = 0.6666666667; // 2/3
                                         const float c2   = 0.4444444444; // (2/3)^2
                                         const float omc2 = 0.5555555556; // 1 - c^2 = 5/9
-
-                                        float s  = (edge - x) * invR;
+                                    
+                                        // 防止 stx=0 时 sx 落在无效区域导致 sqrt 负数
+                                        float s = clamp((edge - x) * invR, 0.0, 1.0);
                                         float s2 = s * s;
-
+                                    
                                         float C = sqrt(1.0 - s2);        // cos(r)
                                         float D = sqrt(1.0 - c2 * s2);   // cos(o)
-
+                                    
                                         // tan(r-o) = s * (1 - c^2) / (C + c*D)
                                         // offset = edge * (1 + C) * tan(r-o)
                                         return edge * (1.0 + C) * s * omc2 / (C + c * D);
                                     }
-
+                                    
                                     half4 main(float2 coord) {
                                         if (coord.x > edge && coord.x < uResolution.x - edge &&
                                             coord.y > edge && coord.y < uResolution.y - edge) {
                                             return uBackground.eval(coord);
                                         }
-
+                                    
                                         float tx = sign(point_1.x - coord.x) + sign(point_2.x - coord.x);
                                         float ty = sign(point_1.y - coord.y) + sign(point_2.y - coord.y);
-
-                                        float2 finalCoord = coord;
-
-                                        if (tx != 0.0) {
-                                            float stx = sign(tx);
-                                            float sx = (stx > 0.0) ? coord.x : uResolution.x - coord.x;
-                                            finalCoord.x += stx * refract_offset(sx);
-                                        }
-
-                                        if (ty != 0.0) {
-                                            float sty = sign(ty);
-                                            float sy = (sty > 0.0) ? coord.y : uResolution.y - coord.y;
-                                            finalCoord.y += sty * refract_offset(sy);
-                                        }
-
+                                    
+                                        float stx = sign(tx);
+                                        float sty = sign(ty);
+                                    
+                                        // 纯数学镜像，无三元：
+                                        // stx =  1 -> sx = coord.x
+                                        // stx = -1 -> sx = uResolution.x - coord.x
+                                        // stx =  0 -> sx = 0.5 * uResolution.x （后面乘 stx=0 会抵消）
+                                        float sx = 0.5 * (1.0 - stx) * uResolution.x + stx * coord.x;
+                                        float sy = 0.5 * (1.0 - sty) * uResolution.y + sty * coord.y;
+                                    
+                                        float offx = refract_offset(sx);
+                                        float offy = refract_offset(sy);
+                                    
+                                        // 统一为：coord + sign * offset
+                                        float2 finalCoord = coord + float2(stx * offx, sty * offy);
+                                    
                                         return uBackground.eval(finalCoord);
                                     }
                                     """;
