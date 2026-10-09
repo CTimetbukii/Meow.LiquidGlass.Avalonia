@@ -45,6 +45,7 @@
             <liquid:MeowLiquidGlassSurface x:Name="Glass"
                                            Width="400" Height="200"
                                            Canvas.Left="360" Canvas.Top="180"
+                                           BlurRadius="0"
                                            PointerPressed="OnGlassPointerPressed"
                                            PointerMoved="OnGlassPointerMoved"
                                            PointerReleased="OnGlassPointerReleased">

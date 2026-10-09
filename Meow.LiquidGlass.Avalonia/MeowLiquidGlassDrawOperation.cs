@@ -193,9 +193,153 @@ public class MeowLiquidGlassDrawOperation : ICustomDrawOperation
                                                    return uBackground.eval(float2(final_x, final_y));
                                                }
                                                """;
+    
+    private const string SkSlCodeBright = """
+                                          uniform float2 uResolution;
+                                          uniform shader uBackground;
+                                          uniform float edge;
+                                          uniform float2 point_1;
+                                          uniform float2 point_2;
+                                          uniform float invR; // 必须等于 1.0 / edge
+                                          
+                                          // 一次折射：数学化简版
+                                          float refract_once(float x) {
+                                              float R = edge;
+                                              const float c    = 0.6666666667; // 2/3
+                                              const float c2   = 0.4444444444; // (2/3)^2
+                                              const float omc2 = 0.5555555556; // 1 - c^2 = 5/9
+                                          
+                                              float s  = (R - x) * invR; // sinr
+                                              float s2 = s * s;
+                                          
+                                              float C = sqrt(1.0 - s2);      // cosr
+                                              float D = sqrt(1.0 - c2 * s2); // coso
+                                          
+                                              // tan(r-o) = s * (1 - c^2) / (C + c*D)
+                                              // offset = R * (1 + C) * tan(r-o)
+                                              return x + R * (1.0 + C) * s * omc2 / (C + c * D);
+                                          }
+                                          
+                                          // 二次折射：合并除法版
+                                          float refract_twice(float x) {
+                                              float R = edge;
+                                              const float k  = 0.6666666667; // 2/3
+                                              const float k2 = 0.4444444444; // (2/3)^2
+                                          
+                                              float s  = (R - x) * invR; // sinr
+                                              float s2 = s * s;
+                                          
+                                              float cr = sqrt(1.0 - s2);      // cosr
+                                              float co = sqrt(1.0 - k2 * s2); // coso
+                                          
+                                              // cos(r-o) = cr*co + k*s2
+                                              // sin(r-o) = s*(co - k*cr)
+                                              float cosro = cr * co + k * s2;
+                                              float sinro = s * (co - k * cr);
+                                          
+                                              // 原式：
+                                              // P = R * (1 + cr - co/cosro)
+                                              // tan2r2o = 2*sinro*cosro / (cosro^2 - sinro^2)
+                                              // offset = P * tan2r2o
+                                              //
+                                              // 合并后：
+                                              // offset = R * 2*sinro * ((1+cr)*cosro - co) / (cosro^2 - sinro^2)
+                                              float num = 2.0 * sinro * ((1.0 + cr) * cosro - co);
+                                              float den = cosro * cosro - sinro * sinro;
+                                          
+                                              return x + R * num / den;
+                                          }
+                                          
+                                          half3 glassify(half3 c) {
+                                              c = c * 1.03;                    // 提亮
+                                              c = mix(c, half3(1.0), 0.03);    // 加白，通透
+                                              c = (c - 0.5) * 1.04 + 0.5;      // 轻微提对比
+                                              return clamp(c, 0.0, 1.0);
+                                          }
+                                          
+                                          half4 main(float2 coord) {
+                                              // ---------------- 直通区 ----------------
+                                              if (coord.x > edge && coord.x < uResolution.x - edge &&
+                                                  coord.y > edge && coord.y < uResolution.y - edge) {
+                                          
+                                                  half4 bg = uBackground.eval(coord);
+                                                  half3 c  = bg.a > 0.0 ? bg.rgb / bg.a : bg.rgb;
+                                                  c = glassify(c);
+                                                  return half4(c * bg.a, bg.a);
+                                              }
+                                          
+                                              // ---------------- 折射区 ----------------
+                                              float x_f1 = point_1.x - coord.x;
+                                              float x_f2 = point_2.x - coord.x;
+                                              float y_f1 = point_1.y - coord.y;
+                                              float y_f2 = point_2.y - coord.y;
+                                          
+                                              float tx = sign(x_f1) + sign(x_f2);
+                                              float ty = sign(y_f1) + sign(y_f2);
+                                          
+                                              float stx = sign(tx);
+                                              float sty = sign(ty);
+                                          
+                                              float sx = 0.5 * (1.0 - stx) * uResolution.x + stx * coord.x;
+                                              float sy = 0.5 * (1.0 - sty) * uResolution.y + sty * coord.y;
+                                          
+                                              float refract_edge = 0.007843258 * edge;
+                                          
+                                              float x_off = 0.0;
+                                              float y_off = 0.0;
+                                          
+                                              if (tx != 0.0) {
+                                                  if (sx >= refract_edge) {
+                                                      x_off = refract_once(sx);
+                                                  } else {
+                                                      x_off = refract_twice(sx);
+                                                  }
+                                              }
+                                          
+                                              if (ty != 0.0) {
+                                                  if (sy >= refract_edge) {
+                                                      y_off = refract_once(sy);
+                                                  } else {
+                                                      y_off = refract_twice(sy);
+                                                  }
+                                              }
+                                          
+                                              float final_x = coord.x + stx * (x_off - sx);
+                                              float final_y = coord.y + sty * (y_off - sy);
+                                          
+                                              half4 bg = uBackground.eval(float2(final_x, final_y));
+                                              half3 c  = bg.a > 0.0 ? bg.rgb / bg.a : bg.rgb;
+                                          
+                                              // 和直通一样的透亮处理
+                                              c = glassify(c);
+                                          
+                                              // 折射区额外：到四条边最近距离，越靠边越亮
+                                              float dx = min(coord.x, uResolution.x - coord.x);
+                                              float dy = min(coord.y, uResolution.y - coord.y);
+                                              float d  = min(dx, dy);
+                                          
+                                              // edge 之内算折射带，越往里越接近 0
+                                              float t = 1.0 - smoothstep(0.0, edge, d);
+                                          
+                                              // 边缘加白高光
+                                              c = mix(c, half3(1.0), 0.12 * t);
+                                          
+                                              // 冷色偏移，玻璃味
+                                              c.b *= 1.0 + 0.03 * t;
+                                              c.r *= 1.0 - 0.02 * t;
+                                          
+                                              c = clamp(c, 0.0, 1.0);
+                                          
+                                              return half4(c * bg.a, bg.a);
+                                          }
+                                          """;
 
     public Point WindowOffset { get; set; }
     public double RenderScaling { get; set; } = 1.0;
+    
+    public float BlurredEdgePercent { get; set; }
+    public float BlurRadius { get; set; }
+    public CornerRadius CornerRadius { get; set; }
 
     private readonly SKRuntimeEffect? _effect;
 
@@ -204,7 +348,7 @@ public class MeowLiquidGlassDrawOperation : ICustomDrawOperation
         string? errs;
         if (useHighQuality)
         {
-            _effect = SKRuntimeEffect.CreateShader(SkSlCodeHighQuality, out var errors);
+            _effect = SKRuntimeEffect.CreateShader(SkSlCodeBright, out var errors);
             errs = errors;
         }
         else
@@ -248,7 +392,7 @@ public class MeowLiquidGlassDrawOperation : ICustomDrawOperation
                 matrix);
 
             // ... 准备传入 SKSL 的参数 (edge, point_1, point_2, uResolution 保持不变) ...
-            var edge = Math.Min(Bounds.Height, Bounds.Width) * 0.15;
+            var edge = Math.Min(Bounds.Height, Bounds.Width) * BlurredEdgePercent;
             var invR = 1 / edge;
 
             var uniforms = new SKRuntimeEffectUniforms(_effect);
@@ -266,12 +410,12 @@ public class MeowLiquidGlassDrawOperation : ICustomDrawOperation
             paint.Shader = finalShader;
 
             // Skia 会自动对全屏高斯模糊进行降采样和升采样优化
-            using var filter = SKImageFilter.CreateBlur(3, 3, SKShaderTileMode.Clamp);
+            using var filter = SKImageFilter.CreateBlur(BlurRadius, BlurRadius, SKShaderTileMode.Clamp);
             paint.ImageFilter = filter;
 
             canvas.Save();
             var size = new SKSize((float)Bounds.Width, (float)Bounds.Height);
-            var radius = size.Height * 0.15f;
+            var radius = size.Height * 0.15f; // todo corner radius 调整
             var rect = SKRect.Create(size.Width, size.Height);
             var maxRadius = Math.Min(rect.Width, rect.Height) * 0.5f;
             radius = Math.Min(radius, maxRadius);
