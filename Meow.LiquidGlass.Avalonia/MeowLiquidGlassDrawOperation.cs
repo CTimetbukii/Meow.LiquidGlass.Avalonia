@@ -310,24 +310,25 @@ public class MeowLiquidGlassDrawOperation : ICustomDrawOperation
                                               half4 bg = uBackground.eval(float2(final_x, final_y));
                                               half3 c  = bg.a > 0.0 ? bg.rgb / bg.a : bg.rgb;
                                           
-                                              // 和直通一样的透亮处理
                                               c = glassify(c);
                                           
-                                              // 折射区额外：到四条边最近距离，越靠边越亮
-                                              float dx = min(coord.x, uResolution.x - coord.x);
-                                              float dy = min(coord.y, uResolution.y - coord.y);
-                                              float d  = min(dx, dy);
+                                              //圆角矩形精确距离
+                                              float r = edge;
+                                              float2 halfSize = uResolution * 0.5;
+                                              float2 p = coord - halfSize;
+                                              float2 q = abs(p) - (halfSize - r);
+                                              float sd = length(max(q, float2(0.0))) + min(max(q.x, q.y), 0.0) - r;
+                                              float d = -sd;
                                           
-                                              // edge 之内算折射带，越往里越接近 0
-                                              float t = 1.0 - smoothstep(0.0, edge, d);
+                                              //极细描边高光
+                                              float t = exp(-(d * d) * 0.694444);
                                           
-                                              // 边缘加白高光
-                                              c = mix(c, half3(1.0), 0.12 * t);
+                                              //黑背景门控
+                                              float raw_luma = dot(bg.rgb, half3(0.2126, 0.7152, 0.0722));
+                                              float visible  = smoothstep(0.05, 0.20, raw_luma);
                                           
-                                              // 冷色偏移，玻璃味
-                                              c.b *= 1.0 + 0.03 * t;
-                                              c.r *= 1.0 - 0.02 * t;
-                                          
+                                              float k = 0.15 * t * visible;
+                                              c += half3(k);
                                               c = clamp(c, 0.0, 1.0);
                                           
                                               return half4(c * bg.a, bg.a);
